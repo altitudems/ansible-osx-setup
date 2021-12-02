@@ -1,110 +1,85 @@
 ---
 - hosts: localhost
   tasks:
-    - name: Install homebrew
-      include_role:
-        name: geerlingguy.mac.homebrew
+    # - name: Install homebrew
+    #   include_role:
+    #     name: geerlingguy.mac.homebrew
 
-    - name: Make sure homebrew bin is in path
-      ansible.builtin.lineinfile:
-        path: /etc/paths
-        state: present
-        line: '/opt/homebrew/bin'
-      become: true
-      become_user: root
+    # - name: Make sure homebrew bin is in path
+    #   ansible.builtin.lineinfile:
+    #     path: /etc/paths
+    #     state: present
+    #     line: '/opt/homebrew/bin'
+    #   become: true
+    #   become_user: root
 
-    - name: 'add custom homebrew repos'
-      community.general.homebrew_tap:
-        name: [
-          adoptopenjdk/openjdk,
-          fishtown-analytics/dbt,
-          heroku/brew,
-          homebrew/cask-versions,
-          thoughtbot/formulae,
-          weaveworks/tap,
-        ]
+    # - name: 'add custom homebrew repos'
+    #   community.general.homebrew_tap:
+    #     name: [
+    #       heroku/brew
+    #     ]
 
-    - name: Install core packages via brew casks
-      community.general.homebrew_cask:
-        name: "{{ item }}"
-      ignore_errors: yes
-      with_items:
-        - docker
-        - drawio
-        - google-chrome
-        - visual-studio-code
-        - vlc
-        - microsoft-teams
+    # - name: Install core packages via brew casks
+    #   community.general.homebrew_cask:
+    #     name: "{{ item }}"
+    #   ignore_errors: yes
+    #   with_items:
+    #     - docker
+    #     - drawio
+    #     - google-chrome
+    #     - visual-studio-code
+    #     - vlc
+    #     - microsoft-teams
+    #     - slack
 
-    - name: "Install homebrew packages"
-      community.general.homebrew:
-        name: [
-          'autoconf',
-          'automake',
-          'bfg',
-          'coreutils',
-          'curl',
-          'direnv',
-          'dnsmasq',
-          'fzf',
-          'gnu-time',
-          'gpg',
-          'heroku',
-          'htop',
-          'imagemagick@6',
-          'kubectx',
-          'kubernetes-cli',
-          'kubernetes-helm',
-          'libtool',
-          'libxslt',
-          'libyaml',
-          'mas',
-          'openssl' ,
-          'pkg-config',
-          'postgresql',
-          'rcm',
-          'readline',
-          'redis',
-          'sqlite3',
-          'tmux',
-          'unixodbc',
-          'unzip',
-          'vim',
-          'watchman',
-          'xz',
-          'yarn',
-          'zlib',
-          'zsh',
-          'youtube-dl',
-          'tree'
-        ]
-        state: present
-        update_homebrew: yes
+    # - name: "Install homebrew packages"
+    #   community.general.homebrew:
+    #     name: [
+    #       'bfg',
+    #       'pkgconfig',
+    #       'zlib',
+    #       'curl',
+    #       'direnv',
+    #       'gnu-time',
+    #       'gpg',
+    #       'heroku',
+    #       'htop',
+    #       'kubectx',
+    #       'kubernetes-cli',
+    #       'kubernetes-helm',
+    #       'kubeseal',
+    #       'openssl' ,
+    #       'postgresql',
+    #       'zsh',
+    #       'youtube-dl',
+    #       'tree',
+    #       'doppler',
+    #       'yq',
+    #       'jq',
+    #       'yamllint'
+    #     ]
+    #     state: present
+    #     update_homebrew: yes
 
-    - name: "Install from Mac app store"
-      shell: mas install {{ item }}
-      with_items:
-        - 497799835 # xcode
+    # - name: Get the path to ZSH
+    #   become: false
+    #   local_action: command which zsh
+    #   register: zsh_path
 
-    - name: Get the path to ZSH
-      become: false
-      local_action: command which zsh
-      register: zsh_path
+    # - name: "Ensure homebrew zsh is in allowed shells"
+    #   lineinfile:
+    #     path: /etc/shells
+    #     line: "{{ zsh_path.stdout }}"
+    #   become: true
 
-    - name: "Ensure homebrew zsh is in allowed shells"
-      lineinfile:
-        path: /etc/shells
-        line: "{{ zsh_path.stdout }}"
-      become: true
+    # - name: Install Oh My ZSH
+    #   shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
+    #   args:
+    #     creates: "/Users/{{ lookup('env', 'USER') }}/.oh-my-zsh"
 
-    - name: Install Oh My ZSH
-      shell: sh -c "$(curl -fsSL https://raw.githubusercontent.com/robbyrussell/oh-my-zsh/master/tools/install.sh)"
-      args:
-        creates: "/Users/{{ lookup('env', 'USER') }}/.oh-my-zsh"
-
-    - name: Set ZSH as the default shell
-      shell: chsh -s $(which zsh) {{ lookup('env', 'USER') }}
-      become: true
+    # - name: Set ZSH as the default shell
+    #   shell: chsh -s $(which zsh) {{ lookup('env', 'USER') }}
+    #   become: true
 
     - name: "Create a default ZSH configuration"
       template:
@@ -112,74 +87,17 @@
         dest: /Users/{{ lookup('env', 'USER') }}/.zshrc
         owner: "{{ lookup('env', 'USER') }}"
         force: yes
+    
+    - name: Install dotfiles
+      include_role: 
+        name: geerlingguy.dotfiles
+      vars:
+        dotfiles_repo: "https://github.com/altitudems/dotfiles.git"
+        dotfiles_repo_version: main
+        dotfiles_files:
+        - .osx
+        - .zshrc.personal.after
+        - .inputrc
 
-    - name: Create a default VSCode configuration
-      template:
-        src: templates/vscode-settings.json.j2
-        dest: /Users/{{ lookup('env', 'USER') }}/Library/Application Support/Code/User/settings.json
-        owner: "{{ lookup('env', 'USER') }}"
-        force: yes
 
-    - name: Create a default VSCode keuybinding configuration
-      template:
-        src: templates/vscode-keybindings.json.j2
-        dest: /Users/{{ lookup('env', 'USER') }}/Library/Application Support/Code/User/keybindings.json
-        owner: "{{ lookup('env', 'USER') }}"
-        force: yes
-
-    # Add something which ensures path is set here
-    - name: Install VSCode extensions
-      shell: code --install-extension {{ item }}
-      with_items:
-        - apollographql.vscode-apollo
-        - eamodio.gitlens
-        - kaiwood.endwise
-        - karunamurti.haml
-        - ms-vscode-remote.vscode-remote-extensionpack
-        - ms-vscode.vscode-typescript-tslint-plugin
-        - wholroyd.jinja
-        - streetsidesoftware.code-spell-checker
-
-    - git:
-        repo: https://github.com/asdf-vm/asdf.git
-        dest: "/Users/{{ lookup('env', 'USER') }}/.asdf"
-        version: v0.8.1
-
-    - name: "Create a default asdf configuration"
-      template:
-        src: templates/.asdfrc.j2
-        dest: /Users/{{ lookup('env', 'USER') }}/.asdfrc
-        owner: "{{ lookup('env', 'USER') }}"
-        force: yes
-
-    - name: "Install asdf plugins"
-      shell: |
-        source /Users/{{ lookup('env', 'USER') }}/.asdf/asdf.sh
-        asdf plugin-add {{ item }} || exit 0
-      with_items:
-        - nodejs
-        - python
-
-    - name: "Install Default Python"
-      shell: |
-        source /Users/{{ lookup('env', 'USER') }}/.asdf/asdf.sh
-        asdf install python 3.10.0
-        asdf global python 3.10.0
-        pip3 install ansible
-        asdf reshim python
-
-    - name: "Install default node"
-      shell: |
-        source /Users/{{ lookup('env', 'USER') }}/.asdf/asdf.sh
-        bash /Users/{{ lookup('env', 'USER') }}/.asdf/plugins/nodejs/bin/import-release-team-keyring
-        asdf install nodejs 16.13.0
-        asdf global nodejs 16.13.0
-
-    - name: Install yarn packages
-      shell: yarn global add {{ item }}
-      with_items: []
-        
-    - name: re-generate bins now we've installed some yarn packages
-      shell: asdf reshim nodejs
-        
 
